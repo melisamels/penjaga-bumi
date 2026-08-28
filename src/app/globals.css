@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f0fdf4;
+  --foreground: #0f172a;
+}
+
+body {
+  color: var(--foreground);
+  background: #0f172a;
+  font-family: 'Nunito', 'Fredoka', ui-rounded, system-ui, -apple-system, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  overflow-x: hidden;
+}
+
+/* Fun bubbly buttons */
+.btn-fun {
+  @apply transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg font-bold rounded-2xl cursor-pointer;
+}
+
+.btn-green {
+  @apply btn-fun bg-emerald-500 hover:bg-emerald-600 text-white border-b-4 border-emerald-700 active:border-b-0;
+}
+
+.btn-blue {
+  @apply btn-fun bg-sky-500 hover:bg-sky-600 text-white border-b-4 border-sky-700 active:border-b-0;
+}
+
+.btn-yellow {
+  @apply btn-fun bg-amber-400 hover:bg-amber-500 text-amber-950 border-b-4 border-amber-600 active:border-b-0;
+}
+
+.btn-purple {
+  @apply btn-fun bg-purple-500 hover:bg-purple-600 text-white border-b-4 border-purple-700 active:border-b-0;
+}
+
+/* Glassmorphism kid card */
+.card-game {
+  @apply bg-white/90 backdrop-blur-md rounded-3xl border-2 border-white/80 shadow-xl;
+}
+
+/* Custom friendly scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.7);
+}
