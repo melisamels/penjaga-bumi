@@ -3,7 +3,9 @@ export type AreaId =
   | 'laut-biru' 
   | 'hutan-hijau' 
   | 'desa-sungai' 
-  | 'kota-bersih';
+  | 'kota-bersih'
+  | 'puncak-gunung'
+  | 'langit-ozon';
 
 export type GameScreen = 
   | 'splash' 
@@ -17,7 +19,8 @@ export type GameScreen =
   | 'daily' 
   | 'teacher' 
   | 'ai-chat' 
-  | 'decision-game';
+  | 'decision-game'
+  | 'license';
 
 export type StageDifficulty = 'mudah' | 'menengah' | 'berpikir';
 
@@ -31,6 +34,16 @@ export interface AreaStage {
   thinkingSkill: string;
   description: string;
   icon: string;
+}
+
+export interface GuardianTier {
+  tierLevel: number; // 1 to 5
+  title: string;
+  subtitle: string;
+  requiredStages: number;
+  badgeIcon: string;
+  accentColor: string;
+  description: string;
 }
 
 export interface PlayerProfile {
@@ -84,7 +97,7 @@ export interface KnowledgeCard {
   id: string;
   title: string;
   subtitle: string;
-  category: 'Laut' | 'Hutan' | 'Sungai' | 'Kota' | 'Satwa';
+  category: 'Laut' | 'Hutan' | 'Sungai' | 'Kota' | 'Satwa' | 'Gunung' | 'Atmosfer';
   icon: string;
   summary: string;
   funFact: string;
@@ -129,6 +142,7 @@ export interface GameState {
   player: PlayerProfile | null;
   xp: number;
   level: number;
+  guardianTier: number; // 1 to 5
   ecoPoints: number;
   earthHealth: number; // 20 - 100
   unlockedAreas: AreaId[];

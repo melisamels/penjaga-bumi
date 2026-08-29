@@ -39,11 +39,20 @@ export function getLevelInfo(xp: number) {
   };
 }
 
+export function calculateGuardianTier(completedStagesCount: number): number {
+  if (completedStagesCount >= 18) return 5;
+  if (completedStagesCount >= 13) return 4;
+  if (completedStagesCount >= 9) return 3;
+  if (completedStagesCount >= 5) return 2;
+  return 1;
+}
+
 export function getInitialGameState(): GameState {
   return {
     player: null,
     xp: 0,
     level: 1,
+    guardianTier: 1,
     ecoPoints: 50,
     earthHealth: 20, // initial gloomy 20%
     unlockedAreas: ['pantai-penyu'],
@@ -85,10 +94,14 @@ export function loadGameState(): GameState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return getInitialGameState();
     const parsed = JSON.parse(raw);
+    const completedStages = parsed.completedStages || {};
+    const stagesCount = Object.keys(completedStages).length;
+
     return {
       ...getInitialGameState(),
       ...parsed,
-      completedStages: parsed.completedStages || {},
+      guardianTier: parsed.guardianTier || calculateGuardianTier(stagesCount),
+      completedStages,
       currentStageNumber: parsed.currentStageNumber || 1,
     };
   } catch {
@@ -108,15 +121,19 @@ const NEXT_AREA_MAP: Record<AreaId, AreaId | null> = {
   'laut-biru': 'hutan-hijau',
   'hutan-hijau': 'desa-sungai',
   'desa-sungai': 'kota-bersih',
-  'kota-bersih': null,
+  'kota-bersih': 'puncak-gunung',
+  'puncak-gunung': 'langit-ozon',
+  'langit-ozon': null,
 };
 
 const AREA_HEALTH_MAP: Record<AreaId, number> = {
-  'pantai-penyu': 35,
-  'laut-biru': 50,
-  'hutan-hijau': 70,
-  'desa-sungai': 85,
-  'kota-bersih': 100,
+  'pantai-penyu': 30,
+  'laut-biru': 45,
+  'hutan-hijau': 60,
+  'desa-sungai': 75,
+  'kota-bersih': 85,
+  'puncak-gunung': 95,
+  'langit-ozon': 100,
 };
 
 const AREA_BADGE_MAP: Record<AreaId, string> = {
@@ -125,6 +142,8 @@ const AREA_BADGE_MAP: Record<AreaId, string> = {
   'hutan-hijau': 'badge-hutan',
   'desa-sungai': 'badge-sungai',
   'kota-bersih': 'badge-daurulang',
+  'puncak-gunung': 'badge-gunung',
+  'langit-ozon': 'badge-ozon',
 };
 
 const AREA_CARD_MAP: Record<AreaId, string[]> = {
@@ -133,14 +152,14 @@ const AREA_CARD_MAP: Record<AreaId, string[]> = {
   'hutan-hijau': ['kc-pohon'],
   'desa-sungai': ['kc-sungai'],
   'kota-bersih': ['kc-sampah-organik', 'kc-sampah-plastik'],
+  'puncak-gunung': ['kc-pohon'],
+  'langit-ozon': ['kc-sungai'],
 };
 
 export function isStageUnlocked(state: GameState, areaId: AreaId, stageNumber: number): boolean {
   if (!state.unlockedAreas.includes(areaId)) return false;
   if (stageNumber === 1) return true;
-  // If whole area was completed previously
   if (state.completedMissions[areaId]) return true;
-  // Check previous stage
   const prevStageKey = `${areaId}-${stageNumber - 1}`;
   return !!state.completedStages?.[prevStageKey];
 }
@@ -156,6 +175,7 @@ export function completeStageReward(
   nextStageUnlocked: number | null;
   nextAreaUnlocked: AreaId | null;
   newBadgesUnlocked: string[];
+  newTierUnlocked: number | null;
 } {
   const stageKey = `${areaId}-${stageNumber}`;
   const existingStage = state.completedStages?.[stageKey];
@@ -177,6 +197,10 @@ export function completeStageReward(
     },
   };
 
+  const completedStagesCount = Object.keys(updatedCompletedStages).length;
+  const newTier = calculateGuardianTier(completedStagesCount);
+  const newTierUnlocked = newTier > (state.guardianTier || 1) ? newTier : null;
+
   let nextStageUnlocked: number | null = null;
   if (stageNumber < 3) {
     nextStageUnlocked = stageNumber + 1;
@@ -190,7 +214,7 @@ export function completeStageReward(
 
   const completedMissions = { ...state.completedMissions };
 
-  // If completing stage 3, area is fully conquered!
+  // If completing stage 3, area is fully completed!
   if (stageNumber === 3) {
     const targetHealth = AREA_HEALTH_MAP[areaId];
     newEarthHealth = Math.max(state.earthHealth, targetHealth);
@@ -212,16 +236,16 @@ export function completeStageReward(
       highScore: Math.max(scoreEarned, completedMissions[areaId]?.highScore || 0),
     };
 
-    const allFive = (['pantai-penyu', 'laut-biru', 'hutan-hijau', 'desa-sungai', 'kota-bersih'] as AreaId[]).every(
+    const allSeven = (['pantai-penyu', 'laut-biru', 'hutan-hijau', 'desa-sungai', 'kota-bersih', 'puncak-gunung', 'langit-ozon'] as AreaId[]).every(
       id => !!completedMissions[id]
     );
-    if (allFive && !badges.has('badge-earth-guardian')) {
+    if (allSeven && !badges.has('badge-earth-guardian')) {
       badges.add('badge-earth-guardian');
       newlyUnlockedBadges.push('badge-earth-guardian');
     }
   }
 
-  // Knowledge cards
+  // Cards
   const cards = new Set<string>(state.knowledgeCards);
   const areaCards = AREA_CARD_MAP[areaId] || [];
   areaCards.forEach(c => cards.add(c));
@@ -244,6 +268,7 @@ export function completeStageReward(
     ...state,
     xp: newXp,
     level: newLevelInfo.level,
+    guardianTier: newTier,
     ecoPoints: newPoints,
     earthHealth: newEarthHealth,
     unlockedAreas: Array.from(unlocked),
@@ -260,6 +285,7 @@ export function completeStageReward(
     nextStageUnlocked,
     nextAreaUnlocked: nextArea,
     newBadgesUnlocked: newlyUnlockedBadges,
+    newTierUnlocked,
   };
 }
 
@@ -269,6 +295,5 @@ export function completeMissionReward(
   starsEarned = 3,
   scoreEarned = 100
 ) {
-  // Backwards compatible wrapper around completeStageReward for stage 1
   return completeStageReward(state, areaId, 1, starsEarned, scoreEarned);
 }

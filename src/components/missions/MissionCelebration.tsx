@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { AreaId } from '../../types/game';
-import { AREAS, BADGES } from '../../lib/missionData';
+import { AREAS, BADGES, GUARDIAN_TIERS } from '../../lib/missionData';
 import { sound } from '../../lib/soundEngine';
 import { Star, MapPin, Award, ArrowRight, Sparkles, CheckCircle2, Play } from 'lucide-react';
 
@@ -12,6 +12,7 @@ interface MissionCelebrationProps {
   nextStageUnlocked?: number | null;
   nextAreaUnlocked: AreaId | null;
   newBadges: string[];
+  newTierUnlocked?: number | null;
   onBackToMap: () => void;
   onNextStage?: () => void;
 }
@@ -23,12 +24,14 @@ export const MissionCelebration: React.FC<MissionCelebrationProps> = ({
   nextStageUnlocked,
   nextAreaUnlocked,
   newBadges,
+  newTierUnlocked,
   onBackToMap,
   onNextStage,
 }) => {
   const currentArea = AREAS.find(a => a.id === areaId);
   const nextArea = AREAS.find(a => a.id === nextAreaUnlocked);
   const earnedBadge = BADGES.find(b => newBadges.includes(b.id) || (stageNumber === 3 && b.areaRequired === areaId));
+  const newTierInfo = GUARDIAN_TIERS.find(t => t.tierLevel === newTierUnlocked);
 
   useEffect(() => {
     sound.playFanfare();
@@ -117,6 +120,15 @@ export const MissionCelebration: React.FC<MissionCelebrationProps> = ({
         )}
 
         {/* Next Stage / Next Area Notification */}
+        {newTierInfo && (
+          <div className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 border-2 border-amber-500 rounded-2xl p-3 mb-4 shadow-lg animate-bounce">
+            <div className="text-2xl mb-0.5">{newTierInfo.badgeIcon}</div>
+            <span className="text-[10px] font-black uppercase tracking-wider block">🎉 NAIK TINGKAT PANGKAT GUARDIAN! 🎉</span>
+            <h3 className="font-black text-base">{newTierInfo.title}</h3>
+            <p className="text-[11px] font-bold mt-0.5">{newTierInfo.subtitle}</p>
+          </div>
+        )}
+
         {nextStageUnlocked ? (
           <div className="bg-amber-100 border border-amber-400 rounded-2xl p-2.5 mb-4 text-amber-950 text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 animate-pulse">
             <span>🔓</span>

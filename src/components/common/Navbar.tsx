@@ -104,6 +104,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button
+            onClick={() => handleNavClick('license')}
+            className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition ${
+              currentScreen === 'license'
+                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-300'
+                : 'bg-slate-800 hover:bg-slate-700 text-amber-300'
+            }`}
+            title="Lihat Piagam Lisensi Bertingkat"
+          >
+            <span>📜</span>
+            <span className="hidden md:inline">Lisensi</span>
+          </button>
+
+          <button
             onClick={() => handleNavClick('badges')}
             className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition ${
               currentScreen === 'badges'

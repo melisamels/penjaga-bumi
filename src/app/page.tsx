@@ -18,31 +18,41 @@ import { StoryIntroModal } from '../components/onboarding/StoryIntroModal';
 import { WorldMap } from '../components/world-map/WorldMap';
 import { MissionCelebration } from '../components/missions/MissionCelebration';
 
-// 15 Stage Components across 5 Chapters
-// Chapter 1: Pantai Penyu
+// 21 Stage Components across 7 Elevation Tier Areas
+// Chapter 1: Pantai Penyu (Tier 1)
 import { PantaiPenyuGame } from '../components/missions/pantai-penyu/PantaiPenyuGame';
 import { TukikRescueStage } from '../components/missions/pantai-penyu/TukikRescueStage';
 import { MangroveDefenseStage } from '../components/missions/pantai-penyu/MangroveDefenseStage';
 
-// Chapter 2: Laut Biru
+// Chapter 2: Laut Biru (Tier 1)
 import { LautBiruGame } from '../components/missions/laut-biru/LautBiruGame';
 import { CoralFoodChainStage } from '../components/missions/laut-biru/CoralFoodChainStage';
 import { GhostNetRescueStage } from '../components/missions/laut-biru/GhostNetRescueStage';
 
-// Chapter 3: Hutan Hijau
+// Chapter 3: Hutan Hijau (Tier 2)
 import { HutanHijauGame } from '../components/missions/hutan-hijau/HutanHijauGame';
 import { CanopyBridgeStage } from '../components/missions/hutan-hijau/CanopyBridgeStage';
 import { PeatlandHydrologyStage } from '../components/missions/hutan-hijau/PeatlandHydrologyStage';
 
-// Chapter 4: Desa Sungai
+// Chapter 4: Desa Sungai (Tier 2)
 import { DesaSungaiGame } from '../components/missions/desa-sungai/DesaSungaiGame';
 import { BiofiltrationLabStage } from '../components/missions/desa-sungai/BiofiltrationLabStage';
 import { WaterBalanceStage } from '../components/missions/desa-sungai/WaterBalanceStage';
 
-// Chapter 5: Kota Bersih
+// Chapter 5: Kota Bersih (Tier 3)
 import { KotaBersihGame } from '../components/missions/kota-bersih/KotaBersihGame';
 import { CircularEconomyStage } from '../components/missions/kota-bersih/CircularEconomyStage';
 import { EcoCityPlannerStage } from '../components/missions/kota-bersih/EcoCityPlannerStage';
+
+// Chapter 6: Puncak Mahameru (Tier 4)
+import { PuncakGunungStage1 } from '../components/missions/puncak-gunung/PuncakGunungStage1';
+import { PuncakGunungStage2 } from '../components/missions/puncak-gunung/PuncakGunungStage2';
+import { PuncakGunungStage3 } from '../components/missions/puncak-gunung/PuncakGunungStage3';
+
+// Chapter 7: Langit Ozon (Tier 5)
+import { LangitOzonStage1 } from '../components/missions/langit-ozon/LangitOzonStage1';
+import { LangitOzonStage2 } from '../components/missions/langit-ozon/LangitOzonStage2';
+import { LangitOzonStage3 } from '../components/missions/langit-ozon/LangitOzonStage3';
 
 // Extra Feature Screens & Modals
 import { GuardianBase } from '../components/base/GuardianBase';
@@ -53,6 +63,7 @@ import { TeacherDashboard } from '../components/teacher/TeacherDashboard';
 import { DailyMissionsModal } from '../components/daily/DailyMissionsModal';
 import { SettingsModal } from '../components/common/SettingsModal';
 import { DecisionGameModal } from '../components/decision/DecisionGameModal';
+import { GuardianLicenseModal } from '../components/license/GuardianLicenseModal';
 
 export default function Home() {
   const [gameState, setGameState] = useState<GameState>(getInitialGameState);
@@ -72,6 +83,7 @@ export default function Home() {
     nextStageUnlocked: number | null;
     nextAreaUnlocked: AreaId | null;
     newBadges: string[];
+    newTierUnlocked: number | null;
   } | null>(null);
 
   // Load game state from local storage
@@ -141,7 +153,13 @@ export default function Home() {
   const handleMissionComplete = (stars: number, score: number) => {
     if (!activeAreaId) return;
 
-    const { newState, nextStageUnlocked, nextAreaUnlocked, newBadgesUnlocked } = completeStageReward(
+    const {
+      newState,
+      nextStageUnlocked,
+      nextAreaUnlocked,
+      newBadgesUnlocked,
+      newTierUnlocked,
+    } = completeStageReward(
       gameState,
       activeAreaId,
       activeStageNumber,
@@ -157,6 +175,7 @@ export default function Home() {
       nextStageUnlocked,
       nextAreaUnlocked,
       newBadges: newBadgesUnlocked,
+      newTierUnlocked,
     });
   };
 
@@ -252,11 +271,15 @@ export default function Home() {
         )}
 
         {currentScreen === 'world-map' && (
-          <WorldMap state={gameState} onSelectStage={handleSelectStage} />
+          <WorldMap
+            state={gameState}
+            onSelectStage={handleSelectStage}
+            onOpenLicense={() => setCurrentScreen('license')}
+          />
         )}
 
-        {/* 15 Stage Routing across 5 Chapters */}
-        {/* Chapter 1: Pantai Penyu */}
+        {/* 21 Progressive Stages across 7 Elevation Tier Areas */}
+        {/* Chapter 1: Pantai Penyu (Tier 1) */}
         {currentScreen === 'mission' && activeAreaId === 'pantai-penyu' && activeStageNumber === 1 && (
           <PantaiPenyuGame
             onComplete={handleMissionComplete}
@@ -276,7 +299,7 @@ export default function Home() {
           />
         )}
 
-        {/* Chapter 2: Laut Biru */}
+        {/* Chapter 2: Laut Biru (Tier 1) */}
         {currentScreen === 'mission' && activeAreaId === 'laut-biru' && activeStageNumber === 1 && (
           <LautBiruGame
             onComplete={handleMissionComplete}
@@ -296,7 +319,7 @@ export default function Home() {
           />
         )}
 
-        {/* Chapter 3: Hutan Hijau */}
+        {/* Chapter 3: Hutan Hijau (Tier 2) */}
         {currentScreen === 'mission' && activeAreaId === 'hutan-hijau' && activeStageNumber === 1 && (
           <HutanHijauGame
             onComplete={handleMissionComplete}
@@ -316,7 +339,7 @@ export default function Home() {
           />
         )}
 
-        {/* Chapter 4: Desa Sungai */}
+        {/* Chapter 4: Desa Sungai (Tier 2) */}
         {currentScreen === 'mission' && activeAreaId === 'desa-sungai' && activeStageNumber === 1 && (
           <DesaSungaiGame
             onComplete={handleMissionComplete}
@@ -336,7 +359,7 @@ export default function Home() {
           />
         )}
 
-        {/* Chapter 5: Kota Bersih */}
+        {/* Chapter 5: Kota Bersih (Tier 3) */}
         {currentScreen === 'mission' && activeAreaId === 'kota-bersih' && activeStageNumber === 1 && (
           <KotaBersihGame
             onComplete={handleMissionComplete}
@@ -356,7 +379,54 @@ export default function Home() {
           />
         )}
 
+        {/* Chapter 6: Puncak Mahameru (Tier 4) */}
+        {currentScreen === 'mission' && activeAreaId === 'puncak-gunung' && activeStageNumber === 1 && (
+          <PuncakGunungStage1
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'puncak-gunung' && activeStageNumber === 2 && (
+          <PuncakGunungStage2
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'puncak-gunung' && activeStageNumber === 3 && (
+          <PuncakGunungStage3
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+
+        {/* Chapter 7: Langit Ozon (Tier 5) */}
+        {currentScreen === 'mission' && activeAreaId === 'langit-ozon' && activeStageNumber === 1 && (
+          <LangitOzonStage1
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'langit-ozon' && activeStageNumber === 2 && (
+          <LangitOzonStage2
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'langit-ozon' && activeStageNumber === 3 && (
+          <LangitOzonStage3
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+
         {/* Extra Feature Screens */}
+        {currentScreen === 'license' && (
+          <GuardianLicenseModal
+            state={gameState}
+            onClose={() => setCurrentScreen('world-map')}
+          />
+        )}
+
         {currentScreen === 'base' && (
           <GuardianBase
             state={gameState}
@@ -401,6 +471,7 @@ export default function Home() {
           nextStageUnlocked={celebrationData.nextStageUnlocked}
           nextAreaUnlocked={celebrationData.nextAreaUnlocked}
           newBadges={celebrationData.newBadges}
+          newTierUnlocked={celebrationData.newTierUnlocked}
           onBackToMap={handleBackToMapAfterCelebration}
           onNextStage={handleNextStage}
         />

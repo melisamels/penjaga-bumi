@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { AreaId, GameState, StageDifficulty } from '../../types/game';
-import { AREAS, AREA_STAGES, AreaDetail } from '../../lib/missionData';
+import { AREAS, AREA_STAGES, GUARDIAN_TIERS, AreaDetail } from '../../lib/missionData';
 import { sound } from '../../lib/soundEngine';
 import { isStageUnlocked } from '../../lib/gameState';
-import { Lock, Star, CheckCircle2, Play, Sparkles, AlertCircle, Brain, Lightbulb, Compass } from 'lucide-react';
+import { Lock, Star, CheckCircle2, Play, Sparkles, AlertCircle, Brain, Lightbulb, Compass, Award, Layers } from 'lucide-react';
 
 interface WorldMapProps {
   state: GameState;
   onSelectStage: (areaId: AreaId, stageNumber: number) => void;
+  onOpenLicense?: () => void;
 }
 
-export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
+export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage, onOpenLicense }) => {
   const [selectedArea, setSelectedArea] = useState<AreaDetail | null>(null);
+  const [selectedElevationTier, setSelectedElevationTier] = useState<number | 'all'>('all');
+
+  const currentTierInfo = GUARDIAN_TIERS.find(t => t.tierLevel === state.guardianTier) || GUARDIAN_TIERS[0];
 
   const handlePinClick = (area: AreaDetail) => {
     const isUnlocked = state.unlockedAreas.includes(area.id);
@@ -28,13 +32,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
     onSelectStage(areaId, stageNumber);
   };
 
-  // Node positions on the adventure map (percentage X and Y)
-  const NODE_COORDINATES: Record<AreaId, { x: number; y: number }> = {
-    'pantai-penyu': { x: 20, y: 70 },
-    'laut-biru': { x: 42, y: 78 },
-    'hutan-hijau': { x: 50, y: 35 },
-    'desa-sungai': { x: 74, y: 55 },
-    'kota-bersih': { x: 82, y: 22 },
+  // Node positions on the 7-region tiered adventure map
+  const NODE_COORDINATES: Record<AreaId, { x: number; y: number; tierLevel: number; elevation: string }> = {
+    'pantai-penyu': { x: 18, y: 76, tierLevel: 1, elevation: '0 mdpl' },
+    'laut-biru': { x: 38, y: 84, tierLevel: 1, elevation: '-50 mdpl' },
+    'hutan-hijau': { x: 46, y: 52, tierLevel: 2, elevation: '400 mdpl' },
+    'desa-sungai': { x: 68, y: 62, tierLevel: 2, elevation: '250 mdpl' },
+    'kota-bersih': { x: 82, y: 40, tierLevel: 3, elevation: '100 mdpl' },
+    'puncak-gunung': { x: 30, y: 24, tierLevel: 4, elevation: '2.500 mdpl' },
+    'langit-ozon': { x: 72, y: 16, tierLevel: 5, elevation: '10.000 mdpl' },
   };
 
   const stagesForSelected = selectedArea ? AREA_STAGES[selectedArea.id] || [] : [];
@@ -64,57 +70,113 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
   return (
     <div className="relative min-h-[calc(100vh-60px)] flex flex-col p-4 sm:p-6 bg-gradient-to-b from-sky-300 via-emerald-200 to-amber-100 overflow-hidden select-none">
       {/* Top Banner */}
-      <div className="max-w-5xl mx-auto w-full flex flex-wrap items-center justify-between gap-3 mb-4 z-10">
+      <div className="max-w-5xl mx-auto w-full flex flex-wrap items-center justify-between gap-3 mb-3 z-10">
         <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-md border-2 border-emerald-400/60 flex items-center gap-3">
           <div className="text-2xl animate-spin-slow">🗺️</div>
           <div>
             <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
-              Peta Ekspedisi Penjaga Bumi
+              Peta Ekspedisi Bertingkat
             </h2>
             <p className="text-xs font-bold text-slate-600">
-              5 Chapter & 15 Level Petualangan Berpikir Lingkungan
+              7 Wilayah Biosfer Vertikal: Palung Laut ➡️ Puncak Gunung ➡️ Kubah Ozon
             </p>
           </div>
         </div>
 
-        {/* Global Earth Health Progress */}
-        <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-md border-2 border-sky-400/60 flex items-center gap-3">
-          <div className="text-2xl animate-pulse">🌍</div>
-          <div>
-            <div className="flex items-center justify-between text-xs font-black text-slate-700">
-              <span>Kesehatan Bumi</span>
-              <span className="text-emerald-600 font-extrabold">{state.earthHealth}%</span>
-            </div>
-            <div className="w-32 sm:w-44 h-3 bg-slate-200 rounded-full overflow-hidden border border-slate-300 mt-1">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-700"
-                style={{ width: `${state.earthHealth}%` }}
-              />
+        {/* Guardian Tier & Earth Health */}
+        <div className="flex items-center gap-2">
+          {onOpenLicense && (
+            <button
+              onClick={() => {
+                sound.playPop();
+                onOpenLicense();
+              }}
+              className="bg-amber-400 hover:bg-amber-300 text-amber-950 px-3.5 py-2 rounded-2xl font-black text-xs shadow-md flex items-center gap-1.5 transition active:scale-95"
+            >
+              <Award className="w-4 h-4" />
+              <span>{currentTierInfo.badgeIcon} {currentTierInfo.title}</span>
+            </button>
+          )}
+
+          <div className="bg-white/90 backdrop-blur-md px-3.5 py-2 rounded-2xl shadow-md border-2 border-sky-400/60 flex items-center gap-2.5">
+            <span className="text-2xl animate-pulse">🌍</span>
+            <div>
+              <div className="flex items-center justify-between text-xs font-black text-slate-700">
+                <span>Kesehatan</span>
+                <span className="text-emerald-600 font-extrabold ml-2">{state.earthHealth}%</span>
+              </div>
+              <div className="w-24 sm:w-32 h-2.5 bg-slate-200 rounded-full overflow-hidden border border-slate-300 mt-0.5">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-700"
+                  style={{ width: `${state.earthHealth}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Elevation Tier Filter Tabs */}
+      <div className="max-w-5xl mx-auto w-full flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 z-10 scrollbar-none text-xs font-black">
+        <button
+          onClick={() => {
+            sound.playPop(420);
+            setSelectedElevationTier('all');
+          }}
+          className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition ${
+            selectedElevationTier === 'all'
+              ? 'bg-slate-900 text-white shadow-md'
+              : 'bg-white/80 text-slate-700 hover:bg-white'
+          }`}
+        >
+          Semua Tingkat (7 Wilayah)
+        </button>
+
+        {[
+          { tier: 1, name: 'Tier 1: Laut & Pantai (0m)', icon: '🌊' },
+          { tier: 2, name: 'Tier 2: Hutan & Sungai (400m)', icon: '🌳' },
+          { tier: 3, name: 'Tier 3: Kota Sirkular (100m)', icon: '🏙️' },
+          { tier: 4, name: 'Tier 4: Puncak Mahameru (2.500m)', icon: '🏔️' },
+          { tier: 5, name: 'Tier 5: Langit Ozon (10.000m)', icon: '🌤️' },
+        ].map(item => (
+          <button
+            key={item.tier}
+            onClick={() => {
+              sound.playPop(450 + item.tier * 20);
+              setSelectedElevationTier(item.tier);
+            }}
+            className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1 ${
+              selectedElevationTier === item.tier
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-white/80 text-slate-700 hover:bg-white'
+            }`}
+          >
+            <span>{item.icon}</span>
+            <span>{item.name}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Main Adventure Map Canvas Area */}
       <div className="relative max-w-5xl mx-auto w-full flex-1 min-h-[500px] card-game overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-tr from-sky-400 via-teal-300 to-amber-200">
-        {/* SVG Decorative Map Background Layer: Islands, Waves, Trees */}
+        {/* SVG Decorative Map Background Layer */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
           <path d="M0,150 Q120,130 240,150 T480,150 T720,150 T960,150 T1200,150" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="3" />
           <path d="M0,280 Q100,260 200,280 T400,280 T600,280 T800,280 T1000,280" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
           <path d="M0,420 Q140,400 280,420 T560,420 T840,420 T1120,420" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="3" />
 
           {/* Island Landmasses */}
-          <ellipse cx="28%" cy="75%" rx="24%" ry="18%" fill="#fef08a" opacity="0.85" />
-          <ellipse cx="28%" cy="75%" rx="20%" ry="14%" fill="#bef264" opacity="0.6" />
+          <ellipse cx="28%" cy="78%" rx="24%" ry="18%" fill="#fef08a" opacity="0.85" />
+          <ellipse cx="50%" cy="54%" rx="22%" ry="20%" fill="#86efac" opacity="0.85" />
+          <ellipse cx="78%" cy="50%" rx="22%" ry="32%" fill="#fed7aa" opacity="0.85" />
+          {/* High Mountain Silhouette */}
+          <polygon points="200,220 320,80 440,220" fill="#fde68a" opacity="0.6" />
+          {/* Cloud Layer Sky */}
+          <ellipse cx="70%" cy="16%" rx="20%" ry="12%" fill="#bae6fd" opacity="0.75" />
 
-          <ellipse cx="52%" cy="38%" rx="22%" ry="22%" fill="#86efac" opacity="0.85" />
-          <ellipse cx="52%" cy="38%" rx="17%" ry="17%" fill="#4ade80" opacity="0.5" />
-
-          <ellipse cx="78%" cy="45%" rx="22%" ry="36%" fill="#fed7aa" opacity="0.85" />
-          <ellipse cx="78%" cy="45%" rx="18%" ry="30%" fill="#bae6fd" opacity="0.6" />
-
+          {/* Ascending elevation dashed path line */}
           <path
-            d={`M 20% 70% Q 30% 82% 42% 78% T 50% 35% T 74% 55% T 82% 22%`}
+            d={`M 18% 76% Q 28% 86% 38% 84% T 46% 52% T 68% 62% T 82% 40% T 30% 24% T 72% 16%`}
             fill="none"
             stroke="#f59e0b"
             strokeWidth="5"
@@ -124,9 +186,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
         </svg>
 
         {/* Small floating decorations */}
-        <div className="absolute top-10 left-8 text-2xl animate-float-slow opacity-80 pointer-events-none">☁️</div>
-        <div className="absolute top-20 right-12 text-3xl animate-float opacity-75 pointer-events-none">☁️</div>
-        <div className="absolute bottom-8 right-1/4 text-2xl animate-bounce-gentle opacity-80 pointer-events-none">⛵</div>
+        <div className="absolute top-8 left-8 text-2xl animate-float-slow opacity-80 pointer-events-none">🦅</div>
+        <div className="absolute top-16 right-12 text-3xl animate-float opacity-75 pointer-events-none">☁️</div>
+        <div className="absolute bottom-6 right-1/3 text-2xl animate-bounce-gentle opacity-80 pointer-events-none">🐬</div>
 
         {/* Area Pins */}
         {AREAS.map(area => {
@@ -135,6 +197,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
           const isCompleted = !!completion;
           const pos = NODE_COORDINATES[area.id];
           const isCurrentTarget = !isCompleted && isUnlocked;
+
+          // Filter by elevation tier if selected
+          const isFaded = selectedElevationTier !== 'all' && pos.tierLevel !== selectedElevationTier;
 
           // Count completed stages in this area
           const stagesCompletedInArea = [1, 2, 3].filter(
@@ -145,7 +210,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
             <div
               key={area.id}
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
+              className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 transition-all duration-300 ${
+                isFaded ? 'opacity-30 scale-90' : 'opacity-100'
+              }`}
             >
               <button
                 onClick={() => handlePinClick(area)}
@@ -193,6 +260,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
                 >
                   <span>{area.icon}</span>
                   <span>{area.name}</span>
+                  <span className="text-[9px] text-slate-500 font-bold hidden sm:inline">({pos.elevation})</span>
                 </div>
               </button>
             </div>
