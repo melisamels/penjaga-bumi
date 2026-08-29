@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { AreaId, GameState } from '../../types/game';
-import { AREAS, AreaDetail } from '../../lib/missionData';
+import { AreaId, GameState, StageDifficulty } from '../../types/game';
+import { AREAS, AREA_STAGES, AreaDetail } from '../../lib/missionData';
 import { sound } from '../../lib/soundEngine';
-import { BumiAvatar } from '../common/BumiAvatar';
-import { Lock, Star, CheckCircle2, Play, Sparkles, AlertCircle } from 'lucide-react';
+import { isStageUnlocked } from '../../lib/gameState';
+import { Lock, Star, CheckCircle2, Play, Sparkles, AlertCircle, Brain, Lightbulb, Compass } from 'lucide-react';
 
 interface WorldMapProps {
   state: GameState;
-  onSelectArea: (areaId: AreaId) => void;
+  onSelectStage: (areaId: AreaId, stageNumber: number) => void;
 }
 
-export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
+export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectStage }) => {
   const [selectedArea, setSelectedArea] = useState<AreaDetail | null>(null);
 
   const handlePinClick = (area: AreaDetail) => {
@@ -23,9 +23,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
     setSelectedArea(area);
   };
 
-  const handleStartMission = (areaId: AreaId) => {
+  const handleStartStage = (areaId: AreaId, stageNumber: number) => {
     sound.playSuccess();
-    onSelectArea(areaId);
+    onSelectStage(areaId, stageNumber);
   };
 
   // Node positions on the adventure map (percentage X and Y)
@@ -35,6 +35,30 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
     'hutan-hijau': { x: 50, y: 35 },
     'desa-sungai': { x: 74, y: 55 },
     'kota-bersih': { x: 82, y: 22 },
+  };
+
+  const stagesForSelected = selectedArea ? AREA_STAGES[selectedArea.id] || [] : [];
+
+  const getDifficultyBadge = (diff: StageDifficulty) => {
+    if (diff === 'mudah') {
+      return (
+        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+          <span>🌱</span> Level 1 • Observasi
+        </span>
+      );
+    } else if (diff === 'menengah') {
+      return (
+        <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+          <Lightbulb className="w-3 h-3 text-amber-700" /> Level 2 • Sebab-Akibat
+        </span>
+      );
+    } else {
+      return (
+        <span className="bg-purple-100 text-purple-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+          <Brain className="w-3 h-3 text-purple-700" /> Level 3 • Berpikir Kritis
+        </span>
+      );
+    }
   };
 
   return (
@@ -48,7 +72,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
               Peta Ekspedisi Penjaga Bumi
             </h2>
             <p className="text-xs font-bold text-slate-600">
-              Pilih wilayah untuk memulai misi penyelamatan!
+              5 Chapter & 15 Level Petualangan Berpikir Lingkungan
             </p>
           </div>
         </div>
@@ -75,25 +99,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
       <div className="relative max-w-5xl mx-auto w-full flex-1 min-h-[500px] card-game overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-tr from-sky-400 via-teal-300 to-amber-200">
         {/* SVG Decorative Map Background Layer: Islands, Waves, Trees */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-          {/* Subtle Ocean Waves */}
           <path d="M0,150 Q120,130 240,150 T480,150 T720,150 T960,150 T1200,150" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="3" />
           <path d="M0,280 Q100,260 200,280 T400,280 T600,280 T800,280 T1000,280" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
           <path d="M0,420 Q140,400 280,420 T560,420 T840,420 T1120,420" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="3" />
 
           {/* Island Landmasses */}
-          {/* Island 1: Beach & Ocean */}
           <ellipse cx="28%" cy="75%" rx="24%" ry="18%" fill="#fef08a" opacity="0.85" />
           <ellipse cx="28%" cy="75%" rx="20%" ry="14%" fill="#bef264" opacity="0.6" />
 
-          {/* Island 2: Deep Forest */}
           <ellipse cx="52%" cy="38%" rx="22%" ry="22%" fill="#86efac" opacity="0.85" />
           <ellipse cx="52%" cy="38%" rx="17%" ry="17%" fill="#4ade80" opacity="0.5" />
 
-          {/* Island 3: River & City */}
           <ellipse cx="78%" cy="45%" rx="22%" ry="36%" fill="#fed7aa" opacity="0.85" />
           <ellipse cx="78%" cy="45%" rx="18%" ry="30%" fill="#bae6fd" opacity="0.6" />
 
-          {/* Connecting dashed path line */}
           <path
             d={`M 20% 70% Q 30% 82% 42% 78% T 50% 35% T 74% 55% T 82% 22%`}
             fill="none"
@@ -110,12 +129,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
         <div className="absolute bottom-8 right-1/4 text-2xl animate-bounce-gentle opacity-80 pointer-events-none">⛵</div>
 
         {/* Area Pins */}
-        {AREAS.map((area, idx) => {
+        {AREAS.map(area => {
           const isUnlocked = state.unlockedAreas.includes(area.id);
           const completion = state.completedMissions[area.id];
           const isCompleted = !!completion;
           const pos = NODE_COORDINATES[area.id];
           const isCurrentTarget = !isCompleted && isUnlocked;
+
+          // Count completed stages in this area
+          const stagesCompletedInArea = [1, 2, 3].filter(
+            lvl => !!state.completedStages?.[`${area.id}-${lvl}`]
+          ).length;
 
           return (
             <div
@@ -150,17 +174,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
                   {isCompleted ? '⭐' : isUnlocked ? area.icon : <Lock className="w-6 h-6 text-slate-300" />}
                 </div>
 
-                {/* Stars container for completed missions */}
-                {isCompleted && completion && (
-                  <div className="flex items-center gap-0.5 bg-white/95 px-2 py-0.5 rounded-full border border-amber-300 shadow-md -mt-2.5 z-10">
-                    {[1, 2, 3].map(s => (
-                      <Star
-                        key={s}
-                        className={`w-3.5 h-3.5 ${
-                          s <= completion.stars ? 'fill-amber-400 text-amber-500' : 'text-slate-300'
-                        }`}
-                      />
-                    ))}
+                {/* Stages progress pill */}
+                {isUnlocked && (
+                  <div className="bg-white/95 px-2 py-0.5 rounded-full border border-amber-300 shadow-md -mt-2.5 z-10 text-[10px] font-black text-amber-900">
+                    Level {stagesCompletedInArea}/3
                   </div>
                 )}
 
@@ -182,10 +199,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
           );
         })}
 
-        {/* Selected Area Detail Popover Modal */}
+        {/* Selected Area Chapter Stage Selection Modal */}
         {selectedArea && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn">
-            <div className="card-game w-full max-w-md p-6 relative border-4 border-amber-400 bg-gradient-to-b from-white to-amber-50 shadow-2xl text-slate-900">
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+            <div className="card-game w-full max-w-lg p-5 sm:p-6 relative border-4 border-amber-400 bg-gradient-to-b from-white via-amber-50 to-emerald-50 shadow-2xl text-slate-900 my-auto">
               <button
                 onClick={() => setSelectedArea(null)}
                 className="absolute top-3 right-3 text-slate-400 hover:text-slate-700 font-black text-xl w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"
@@ -193,12 +210,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
                 ✕
               </button>
 
+              {/* Area Header */}
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-3xl shadow-sm">
                   {selectedArea.icon}
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold uppercase text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
                     {selectedArea.subtitle}
                   </span>
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
@@ -207,36 +225,75 @@ export const WorldMap: React.FC<WorldMapProps> = ({ state, onSelectArea }) => {
                 </div>
               </div>
 
-              <div className="bg-white/80 rounded-2xl p-3.5 border border-amber-200 mb-4 space-y-2">
-                <p className="text-sm font-bold text-slate-700">
-                  {selectedArea.tagline}
-                </p>
-                <div className="text-xs text-rose-700 font-extrabold flex items-center gap-1.5 bg-rose-50 p-2 rounded-xl border border-rose-200">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Masalah: {selectedArea.problem}</span>
-                </div>
+              <p className="text-xs sm:text-sm font-bold text-slate-700 mb-3 bg-white/80 p-2.5 rounded-2xl border border-amber-200">
+                Pilih level tantangan berpikir untuk menyelamatkan wilayah ini:
+              </p>
+
+              {/* 3 Progressive Stages List */}
+              <div className="space-y-2.5 mb-4">
+                {stagesForSelected.map(stage => {
+                  const unlocked = isStageUnlocked(state, selectedArea.id, stage.stageNumber);
+                  const stageData = state.completedStages?.[`${selectedArea.id}-${stage.stageNumber}`];
+                  const isDone = !!stageData;
+
+                  return (
+                    <div
+                      key={stage.id}
+                      className={`p-3 rounded-2xl border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                        isDone
+                          ? 'bg-emerald-50/90 border-emerald-400 shadow-sm'
+                          : unlocked
+                          ? 'bg-white border-amber-400 shadow-md ring-1 ring-amber-300'
+                          : 'bg-slate-100 border-slate-300 opacity-65'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5 flex-1">
+                        <span className="text-2xl sm:text-3xl shrink-0 mt-0.5">{stage.icon}</span>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                            {getDifficultyBadge(stage.difficulty)}
+                            {isDone && (
+                              <span className="text-amber-500 font-bold text-xs flex items-center gap-0.5">
+                                {'⭐'.repeat(stageData.stars)}
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-black text-xs sm:text-sm text-slate-900 leading-tight">
+                            {stage.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-600 font-bold leading-snug line-clamp-1">
+                            {stage.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 flex justify-end">
+                        {unlocked ? (
+                          <button
+                            onClick={() => handleStartStage(selectedArea.id, stage.stageNumber)}
+                            className="btn-green px-4 py-2 text-xs font-black flex items-center gap-1 shadow-sm"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-white" />
+                            <span>{isDone ? 'Main Ulang' : 'Main Sekarang'}</span>
+                          </button>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[11px] font-black text-slate-500 bg-slate-200 px-3 py-1.5 rounded-xl">
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>Terkunci</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-4 px-1">
-                <span>Hadiah Misi:</span>
-                <span className="text-emerald-700 font-black">+100 Eco Points 🌱 & +200 XP 🌟</span>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSelectedArea(null)}
-                  className="w-1/3 py-3 rounded-2xl font-black text-sm bg-slate-100 hover:bg-slate-200 text-slate-700"
-                >
-                  Nanti Dulu
-                </button>
-                <button
-                  onClick={() => handleStartMission(selectedArea.id)}
-                  className="btn-green flex-1 py-3 text-base flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <Play className="w-5 h-5 fill-white" />
-                  <span>MULAI MISI INI!</span>
-                </button>
-              </div>
+              <button
+                onClick={() => setSelectedArea(null)}
+                className="w-full py-2.5 rounded-2xl font-black text-xs bg-slate-100 hover:bg-slate-200 text-slate-700"
+              >
+                Kembali ke Peta
+              </button>
             </div>
           </div>
         )}

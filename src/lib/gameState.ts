@@ -48,7 +48,9 @@ export function getInitialGameState(): GameState {
     earthHealth: 20, // initial gloomy 20%
     unlockedAreas: ['pantai-penyu'],
     completedMissions: {},
+    completedStages: {},
     currentAreaId: null,
+    currentStageNumber: 1,
     badges: [],
     knowledgeCards: ['kc-penyu', 'kc-karang'],
     baseDecorations: [],
@@ -71,6 +73,7 @@ export function getInitialGameState(): GameState {
         'Habitat Hewan': 3,
         'Pencemaran Air': 2,
         'Energi Bersih': 2.5,
+        'Berpikir Kritis & Ekosistem': 3,
       },
     },
   };
@@ -85,6 +88,8 @@ export function loadGameState(): GameState {
     return {
       ...getInitialGameState(),
       ...parsed,
+      completedStages: parsed.completedStages || {},
+      currentStageNumber: parsed.currentStageNumber || 1,
     };
   } catch {
     return getInitialGameState();
@@ -130,56 +135,90 @@ const AREA_CARD_MAP: Record<AreaId, string[]> = {
   'kota-bersih': ['kc-sampah-organik', 'kc-sampah-plastik'],
 };
 
-export function completeMissionReward(
+export function isStageUnlocked(state: GameState, areaId: AreaId, stageNumber: number): boolean {
+  if (!state.unlockedAreas.includes(areaId)) return false;
+  if (stageNumber === 1) return true;
+  // If whole area was completed previously
+  if (state.completedMissions[areaId]) return true;
+  // Check previous stage
+  const prevStageKey = `${areaId}-${stageNumber - 1}`;
+  return !!state.completedStages?.[prevStageKey];
+}
+
+export function completeStageReward(
   state: GameState,
   areaId: AreaId,
+  stageNumber: number,
   starsEarned = 3,
   scoreEarned = 100
 ): {
   newState: GameState;
+  nextStageUnlocked: number | null;
   nextAreaUnlocked: AreaId | null;
   newBadgesUnlocked: string[];
 } {
-  const newXp = state.xp + 200;
+  const stageKey = `${areaId}-${stageNumber}`;
+  const existingStage = state.completedStages?.[stageKey];
+  const bestStars = Math.max(starsEarned, existingStage?.stars || 0);
+
+  const xpReward = stageNumber === 1 ? 120 : stageNumber === 2 ? 180 : 250;
+  const pointsReward = stageNumber === 1 ? 60 : stageNumber === 2 ? 90 : 120;
+
+  const newXp = state.xp + xpReward;
   const newLevelInfo = getLevelInfo(newXp);
-  const newPoints = state.ecoPoints + 100;
-  
-  // Calculate new earth health
-  const targetHealth = AREA_HEALTH_MAP[areaId];
-  const newEarthHealth = Math.max(state.earthHealth, targetHealth);
+  const newPoints = state.ecoPoints + pointsReward;
 
-  // Unlocked areas list
-  const unlocked = new Set<AreaId>(state.unlockedAreas);
-  const nextArea = NEXT_AREA_MAP[areaId];
-  if (nextArea) {
-    unlocked.add(nextArea);
-  }
-
-  // Badges
-  const badges = new Set<string>(state.badges);
-  const newlyUnlockedBadges: string[] = [];
-  const areaBadge = AREA_BADGE_MAP[areaId];
-  if (areaBadge && !badges.has(areaBadge)) {
-    badges.add(areaBadge);
-    newlyUnlockedBadges.push(areaBadge);
-  }
-
-  // Check if all 5 are completed for Earth Guardian badge
-  const completedMissions = {
-    ...state.completedMissions,
-    [areaId]: {
-      stars: Math.max(starsEarned, state.completedMissions[areaId]?.stars || 0),
+  const updatedCompletedStages = {
+    ...(state.completedStages || {}),
+    [stageKey]: {
+      stars: bestStars,
       completedAt: Date.now(),
-      highScore: Math.max(scoreEarned, state.completedMissions[areaId]?.highScore || 0),
+      score: Math.max(scoreEarned, existingStage?.score || 0),
     },
   };
 
-  const allFive = (['pantai-penyu', 'laut-biru', 'hutan-hijau', 'desa-sungai', 'kota-bersih'] as AreaId[]).every(
-    id => !!completedMissions[id]
-  );
-  if (allFive && !badges.has('badge-earth-guardian')) {
-    badges.add('badge-earth-guardian');
-    newlyUnlockedBadges.push('badge-earth-guardian');
+  let nextStageUnlocked: number | null = null;
+  if (stageNumber < 3) {
+    nextStageUnlocked = stageNumber + 1;
+  }
+
+  let nextArea: AreaId | null = null;
+  const newlyUnlockedBadges: string[] = [];
+  const badges = new Set<string>(state.badges);
+  const unlocked = new Set<AreaId>(state.unlockedAreas);
+  let newEarthHealth = state.earthHealth;
+
+  const completedMissions = { ...state.completedMissions };
+
+  // If completing stage 3, area is fully conquered!
+  if (stageNumber === 3) {
+    const targetHealth = AREA_HEALTH_MAP[areaId];
+    newEarthHealth = Math.max(state.earthHealth, targetHealth);
+
+    nextArea = NEXT_AREA_MAP[areaId];
+    if (nextArea) {
+      unlocked.add(nextArea);
+    }
+
+    const areaBadge = AREA_BADGE_MAP[areaId];
+    if (areaBadge && !badges.has(areaBadge)) {
+      badges.add(areaBadge);
+      newlyUnlockedBadges.push(areaBadge);
+    }
+
+    completedMissions[areaId] = {
+      stars: bestStars,
+      completedAt: Date.now(),
+      highScore: Math.max(scoreEarned, completedMissions[areaId]?.highScore || 0),
+    };
+
+    const allFive = (['pantai-penyu', 'laut-biru', 'hutan-hijau', 'desa-sungai', 'kota-bersih'] as AreaId[]).every(
+      id => !!completedMissions[id]
+    );
+    if (allFive && !badges.has('badge-earth-guardian')) {
+      badges.add('badge-earth-guardian');
+      newlyUnlockedBadges.push('badge-earth-guardian');
+    }
   }
 
   // Knowledge cards
@@ -189,19 +228,16 @@ export function completeMissionReward(
 
   // Analytics
   const teacherAnalytics = { ...state.teacherAnalytics };
-  teacherAnalytics.trashCollected += 8;
+  teacherAnalytics.trashCollected += 5;
   teacherAnalytics.animalsHelped += 1;
-  teacherAnalytics.questionsAnswered += 1;
-  teacherAnalytics.correctAnswers += 1;
+  teacherAnalytics.questionsAnswered += 2;
+  teacherAnalytics.correctAnswers += 2;
 
-  if (areaId === 'pantai-penyu' || areaId === 'laut-biru') {
-    teacherAnalytics.topicMastery['Lingkungan Laut'] = Math.min(5, (teacherAnalytics.topicMastery['Lingkungan Laut'] || 3) + 0.5);
-  } else if (areaId === 'hutan-hijau') {
-    teacherAnalytics.topicMastery['Habitat Hewan'] = Math.min(5, (teacherAnalytics.topicMastery['Habitat Hewan'] || 3) + 0.5);
-  } else if (areaId === 'desa-sungai') {
-    teacherAnalytics.topicMastery['Pencemaran Air'] = Math.min(5, (teacherAnalytics.topicMastery['Pencemaran Air'] || 2) + 0.6);
-  } else if (areaId === 'kota-bersih') {
-    teacherAnalytics.topicMastery['Pemilahan Sampah'] = Math.min(5, (teacherAnalytics.topicMastery['Pemilahan Sampah'] || 2.5) + 0.6);
+  if (stageNumber >= 2) {
+    teacherAnalytics.topicMastery['Berpikir Kritis & Ekosistem'] = Math.min(
+      5,
+      (teacherAnalytics.topicMastery['Berpikir Kritis & Ekosistem'] || 3) + 0.4
+    );
   }
 
   const newState: GameState = {
@@ -212,6 +248,7 @@ export function completeMissionReward(
     earthHealth: newEarthHealth,
     unlockedAreas: Array.from(unlocked),
     completedMissions,
+    completedStages: updatedCompletedStages,
     badges: Array.from(badges),
     knowledgeCards: Array.from(cards),
     teacherAnalytics,
@@ -220,7 +257,18 @@ export function completeMissionReward(
   saveGameState(newState);
   return {
     newState,
+    nextStageUnlocked,
     nextAreaUnlocked: nextArea,
     newBadgesUnlocked: newlyUnlockedBadges,
   };
+}
+
+export function completeMissionReward(
+  state: GameState,
+  areaId: AreaId,
+  starsEarned = 3,
+  scoreEarned = 100
+) {
+  // Backwards compatible wrapper around completeStageReward for stage 1
+  return completeStageReward(state, areaId, 1, starsEarned, scoreEarned);
 }

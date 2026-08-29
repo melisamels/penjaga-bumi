@@ -19,6 +19,20 @@ export type GameScreen =
   | 'ai-chat' 
   | 'decision-game';
 
+export type StageDifficulty = 'mudah' | 'menengah' | 'berpikir';
+
+export interface AreaStage {
+  id: string; // e.g. 'pantai-penyu-1'
+  areaId: AreaId;
+  stageNumber: number; // 1, 2, 3
+  title: string;
+  subtitle: string;
+  difficulty: StageDifficulty;
+  thinkingSkill: string;
+  description: string;
+  icon: string;
+}
+
 export interface PlayerProfile {
   name: string;
   avatarId: string;
@@ -39,6 +53,12 @@ export interface CompletedMissionData {
   stars: number;
   completedAt: number;
   highScore: number;
+}
+
+export interface CompletedStageData {
+  stars: number;
+  completedAt: number;
+  score: number;
 }
 
 export interface BaseItem {
@@ -95,6 +115,7 @@ export interface TeacherAnalytics {
     'Habitat Hewan': number;
     'Pencemaran Air': number;
     'Energi Bersih': number;
+    'Berpikir Kritis & Ekosistem'?: number;
   };
 }
 
@@ -112,7 +133,9 @@ export interface GameState {
   earthHealth: number; // 20 - 100
   unlockedAreas: AreaId[];
   completedMissions: Partial<Record<AreaId, CompletedMissionData>>;
+  completedStages: Record<string, CompletedStageData>; // key: `${areaId}-${stageNumber}`
   currentAreaId: AreaId | null;
+  currentStageNumber: number; // 1, 2, 3
   badges: string[];
   knowledgeCards: string[];
   baseDecorations: string[];

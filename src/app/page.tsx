@@ -6,11 +6,11 @@ import {
   getInitialGameState,
   loadGameState,
   saveGameState,
-  completeMissionReward,
+  completeStageReward,
 } from '../lib/gameState';
 import { sound } from '../lib/soundEngine';
 
-// Components
+// Common & Onboarding Components
 import { Navbar } from '../components/common/Navbar';
 import { SplashScreen } from '../components/onboarding/SplashScreen';
 import { ProfileCreation } from '../components/onboarding/ProfileCreation';
@@ -18,12 +18,31 @@ import { StoryIntroModal } from '../components/onboarding/StoryIntroModal';
 import { WorldMap } from '../components/world-map/WorldMap';
 import { MissionCelebration } from '../components/missions/MissionCelebration';
 
-// Missions
+// 15 Stage Components across 5 Chapters
+// Chapter 1: Pantai Penyu
 import { PantaiPenyuGame } from '../components/missions/pantai-penyu/PantaiPenyuGame';
+import { TukikRescueStage } from '../components/missions/pantai-penyu/TukikRescueStage';
+import { MangroveDefenseStage } from '../components/missions/pantai-penyu/MangroveDefenseStage';
+
+// Chapter 2: Laut Biru
 import { LautBiruGame } from '../components/missions/laut-biru/LautBiruGame';
+import { CoralFoodChainStage } from '../components/missions/laut-biru/CoralFoodChainStage';
+import { GhostNetRescueStage } from '../components/missions/laut-biru/GhostNetRescueStage';
+
+// Chapter 3: Hutan Hijau
 import { HutanHijauGame } from '../components/missions/hutan-hijau/HutanHijauGame';
+import { CanopyBridgeStage } from '../components/missions/hutan-hijau/CanopyBridgeStage';
+import { PeatlandHydrologyStage } from '../components/missions/hutan-hijau/PeatlandHydrologyStage';
+
+// Chapter 4: Desa Sungai
 import { DesaSungaiGame } from '../components/missions/desa-sungai/DesaSungaiGame';
+import { BiofiltrationLabStage } from '../components/missions/desa-sungai/BiofiltrationLabStage';
+import { WaterBalanceStage } from '../components/missions/desa-sungai/WaterBalanceStage';
+
+// Chapter 5: Kota Bersih
 import { KotaBersihGame } from '../components/missions/kota-bersih/KotaBersihGame';
+import { CircularEconomyStage } from '../components/missions/kota-bersih/CircularEconomyStage';
+import { EcoCityPlannerStage } from '../components/missions/kota-bersih/EcoCityPlannerStage';
 
 // Extra Feature Screens & Modals
 import { GuardianBase } from '../components/base/GuardianBase';
@@ -40,6 +59,7 @@ export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('splash');
   const [activeAreaId, setActiveAreaId] = useState<AreaId | null>(null);
+  const [activeStageNumber, setActiveStageNumber] = useState<number>(1);
 
   // Modals state
   const [isDailyOpen, setIsDailyOpen] = useState(false);
@@ -47,7 +67,9 @@ export default function Home() {
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
   const [celebrationData, setCelebrationData] = useState<{
     areaId: AreaId;
+    stageNumber: number;
     stars: number;
+    nextStageUnlocked: number | null;
     nextAreaUnlocked: AreaId | null;
     newBadges: string[];
   } | null>(null);
@@ -104,22 +126,25 @@ export default function Home() {
   // Start first mission from emergency call
   const handleStartFirstMission = () => {
     setActiveAreaId('pantai-penyu');
+    setActiveStageNumber(1);
     setCurrentScreen('mission');
   };
 
-  // Select area from World Map
-  const handleSelectArea = (areaId: AreaId) => {
+  // Select area & stage from World Map
+  const handleSelectStage = (areaId: AreaId, stageNumber: number) => {
     setActiveAreaId(areaId);
+    setActiveStageNumber(stageNumber);
     setCurrentScreen('mission');
   };
 
-  // Mission Complete trigger
+  // Stage Mission Complete trigger
   const handleMissionComplete = (stars: number, score: number) => {
     if (!activeAreaId) return;
 
-    const { newState, nextAreaUnlocked, newBadgesUnlocked } = completeMissionReward(
+    const { newState, nextStageUnlocked, nextAreaUnlocked, newBadgesUnlocked } = completeStageReward(
       gameState,
       activeAreaId,
+      activeStageNumber,
       stars,
       score
     );
@@ -127,10 +152,21 @@ export default function Home() {
     setGameState(newState);
     setCelebrationData({
       areaId: activeAreaId,
+      stageNumber: activeStageNumber,
       stars,
+      nextStageUnlocked,
       nextAreaUnlocked,
       newBadges: newBadgesUnlocked,
     });
+  };
+
+  // Advance to next stage directly from celebration
+  const handleNextStage = () => {
+    if (!celebrationData?.nextStageUnlocked || !activeAreaId) return;
+    const nextLvl = celebrationData.nextStageUnlocked;
+    setCelebrationData(null);
+    setActiveStageNumber(nextLvl);
+    setCurrentScreen('mission');
   };
 
   // Return to World Map after celebration
@@ -216,40 +252,105 @@ export default function Home() {
         )}
 
         {currentScreen === 'world-map' && (
-          <WorldMap state={gameState} onSelectArea={handleSelectArea} />
+          <WorldMap state={gameState} onSelectStage={handleSelectStage} />
         )}
 
-        {/* Mission Play Area */}
-        {currentScreen === 'mission' && activeAreaId === 'pantai-penyu' && (
+        {/* 15 Stage Routing across 5 Chapters */}
+        {/* Chapter 1: Pantai Penyu */}
+        {currentScreen === 'mission' && activeAreaId === 'pantai-penyu' && activeStageNumber === 1 && (
           <PantaiPenyuGame
             onComplete={handleMissionComplete}
             onExit={() => setCurrentScreen('world-map')}
           />
         )}
+        {currentScreen === 'mission' && activeAreaId === 'pantai-penyu' && activeStageNumber === 2 && (
+          <TukikRescueStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'pantai-penyu' && activeStageNumber === 3 && (
+          <MangroveDefenseStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
 
-        {currentScreen === 'mission' && activeAreaId === 'laut-biru' && (
+        {/* Chapter 2: Laut Biru */}
+        {currentScreen === 'mission' && activeAreaId === 'laut-biru' && activeStageNumber === 1 && (
           <LautBiruGame
             onComplete={handleMissionComplete}
             onExit={() => setCurrentScreen('world-map')}
           />
         )}
+        {currentScreen === 'mission' && activeAreaId === 'laut-biru' && activeStageNumber === 2 && (
+          <CoralFoodChainStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'laut-biru' && activeStageNumber === 3 && (
+          <GhostNetRescueStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
 
-        {currentScreen === 'mission' && activeAreaId === 'hutan-hijau' && (
+        {/* Chapter 3: Hutan Hijau */}
+        {currentScreen === 'mission' && activeAreaId === 'hutan-hijau' && activeStageNumber === 1 && (
           <HutanHijauGame
             onComplete={handleMissionComplete}
             onExit={() => setCurrentScreen('world-map')}
           />
         )}
-
-        {currentScreen === 'mission' && activeAreaId === 'desa-sungai' && (
-          <DesaSungaiGame
+        {currentScreen === 'mission' && activeAreaId === 'hutan-hijau' && activeStageNumber === 2 && (
+          <CanopyBridgeStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'hutan-hijau' && activeStageNumber === 3 && (
+          <PeatlandHydrologyStage
             onComplete={handleMissionComplete}
             onExit={() => setCurrentScreen('world-map')}
           />
         )}
 
-        {currentScreen === 'mission' && activeAreaId === 'kota-bersih' && (
+        {/* Chapter 4: Desa Sungai */}
+        {currentScreen === 'mission' && activeAreaId === 'desa-sungai' && activeStageNumber === 1 && (
+          <DesaSungaiGame
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'desa-sungai' && activeStageNumber === 2 && (
+          <BiofiltrationLabStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'desa-sungai' && activeStageNumber === 3 && (
+          <WaterBalanceStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+
+        {/* Chapter 5: Kota Bersih */}
+        {currentScreen === 'mission' && activeAreaId === 'kota-bersih' && activeStageNumber === 1 && (
           <KotaBersihGame
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'kota-bersih' && activeStageNumber === 2 && (
+          <CircularEconomyStage
+            onComplete={handleMissionComplete}
+            onExit={() => setCurrentScreen('world-map')}
+          />
+        )}
+        {currentScreen === 'mission' && activeAreaId === 'kota-bersih' && activeStageNumber === 3 && (
+          <EcoCityPlannerStage
             onComplete={handleMissionComplete}
             onExit={() => setCurrentScreen('world-map')}
           />
@@ -295,10 +396,13 @@ export default function Home() {
       {celebrationData && (
         <MissionCelebration
           areaId={celebrationData.areaId}
+          stageNumber={celebrationData.stageNumber}
           stars={celebrationData.stars}
+          nextStageUnlocked={celebrationData.nextStageUnlocked}
           nextAreaUnlocked={celebrationData.nextAreaUnlocked}
           newBadges={celebrationData.newBadges}
           onBackToMap={handleBackToMapAfterCelebration}
+          onNextStage={handleNextStage}
         />
       )}
 
